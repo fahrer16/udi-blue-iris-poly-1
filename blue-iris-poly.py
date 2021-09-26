@@ -5,48 +5,64 @@ based on the template for Polyglot v2 written in Python2/3 by Einstein.42 (James
 Blue Iris json functionality based on 'blueiriscmd' project by magapp (https://github.com/magapp/blueiriscmd)
 """
 
-import polyinterface
+import udi_interface
 import requests, json, hashlib
 import sys
 
 
-LOGGER = polyinterface.LOGGER
+LOGGER = udi_interface.LOGGER
 SERVERDATA = json.load(open('server.json'))
 VERSION = SERVERDATA['credits'][0]['version']
 
-class Controller(polyinterface.Controller):
-    def __init__(self, polyglot):
-        super().__init__(polyglot)
+class Controller(udi_interface.Node):
+    def __init__(self, polyglot, primary, address, name):
+        super().__init__(polyglot, primary, address, name)
+        self.poly = polyglot
         self.name = 'Blue Iris'
         self.initialized = False
         self.tries = 0
+        self.url = ''
+        self.session = None
 
-    def start(self):
-        LOGGER.info('Started Blue Iris NodeServer for v2 NodeServer version %s', str(VERSION))
+        polyglot.subscribe(polyglot.START, self.start, address)
+        polyglot.subscribe(polyglot.CUSTOMPARAMS, self.parameterHandler)
+        polyglot.subscribe(polyglot.POLL, self.shortPoll)
+
+        polyglot.ready()
+        polyglot.addNode(self)
+
+    def parameterHandler(self, params):
+        self.poly.Notices.clear()
         try:
-            if 'host' in self.polyConfig['customParams']:
-                self.host = self.polyConfig['customParams']['host']
+            if 'host' in params:
+                self.host = params['host']
             else:
                 self.host = ""
 
-            if 'user' in self.polyConfig['customParams']:
-                self.user = self.polyConfig['customParams']['user']
+            if 'user' in params:
+                self.user = params['user']
             else:
                 self.user = ""
 
-            if 'password' in self.polyConfig['customParams']:
-                self.password = self.polyConfig['customParams']['password']
+            if 'password' in params:
+                self.password = params['password']
             else:
                 self.password = ""
 
             if self.host == "" or self.user == "" or self.password == "":
                 LOGGER.error('Blue Iris requires \'host\', \'user\', and \'password\' parameters to be specified in custom configuration.')
+                self.poly.Notices['cfg'] = 'Please enter host, user and password.'
                 return False
             else:
                 if self.connect(): 
                     self.discover()
         except Exception as ex:
             LOGGER.error('Error starting Blue Iris NodeServer: %s', str(ex))
+
+    def start(self):
+        self.poly.updateProfile()
+        self.poly.setCustomParamsDoc()
+        LOGGER.info('Started Blue Iris NodeServer for v3 NodeServer version %s', str(VERSION))
 
     def connect(self):
         try:
@@ -62,8 +78,8 @@ class Controller(polyinterface.Controller):
 
             #Log into Blue Iris Server using username, password, and session ID obtained earlier.
             _data = ("%s:%s:%s" % (self.user, self.session, self.password)).encode('utf-8')
-            self.loginHash = hashlib.md5(_data).hexdigest()
-            r = requests.post(self.url, data=json.dumps({"cmd":"login", "session": self.session, "response": self.loginHash}))
+            loginHash = hashlib.md5(_data).hexdigest()
+            r = requests.post(self.url, data=json.dumps({"cmd":"login", "session": self.session, "response": loginHash}))
             LOGGER.debug("Initializing Blue Iris Connection, session: %s", str(self.session))
             if r.status_code != 200 or r.json()["result"] != "success":
                 LOGGER.error('Error logging into Blue Iris Server: %s', str(r.text))
@@ -80,20 +96,19 @@ class Controller(polyinterface.Controller):
             return False
 
     def fillPanels(self):
-        for node in self.nodes:
-            self.nodes[node].reportDrivers()
+        for node in self.poly.nodes():
+            node.reportDrivers()
 
-    def shortPoll(self):
+    def shortPoll(self, pollflag):
         if not self.initialized: return False #ensure discovery is completed before polling
+        if 'longPoll' in pollflag:
+            return False
         try:
             self.cameras = self.cmd("camlist")
-            for node in self.nodes:
-                self.nodes[node].query()
+            for node in self.poly.nodes():
+                node.query()
         except Exception as ex:
             LOGGER.error('Error processing shortPoll for %s: %s', self.name, str(ex))
-
-    def longPoll(self):
-        pass
 
     def query(self, command=None):
         try:
@@ -116,9 +131,9 @@ class Controller(polyinterface.Controller):
                     _name = cam['optionDisplay']
                     if _address not in self.nodes and _name[0] != '+': #if the name starts with '+', it's not a camera
                         if cam['ptz']:
-                            self.addNode(camNodePTZ(self, self.address, _address, _name, _shortName))
+                            self.poly.addNode(camNodePTZ(self.poly, self.address, _address, _name, _shortName))
                         else:
-                            self.addNode(camNode(self, self.address, _address, _name, _shortName))
+                            self.poly.addNode(camNode(self.poly, self.address, _address, _name, _shortName))
             self.initialized = True
             return True
         except Exception as ex:
@@ -197,10 +212,13 @@ class Controller(polyinterface.Controller):
                 ] 
 
 
-class camNode(polyinterface.Node):
+class camNode(udi_interface.Node):
     def __init__(self, controller, primary, address, name, shortName):
         super().__init__(controller, primary, address, name)
         self.shortName = shortName
+        self.parent = controller.getNode(primary)
+
+        controller.subscribe(controller.START, self.start, address)
 
     def start(self):
         self.query()
@@ -290,6 +308,9 @@ class camNode(polyinterface.Node):
 class camNodePTZ(camNode):
     def __init__(self, controller, primary, address, name, shortName):
         super().__init__(controller, primary, address, name, shortName)
+        self.parent = controller.getNode(primary)
+
+        controller.subscribe(controller.START, self.start, address)
 
     def start(self):
         super().start()
@@ -334,9 +355,9 @@ class camNodePTZ(camNode):
     
 if __name__ == "__main__":
     try:
-        polyglot = polyinterface.Interface('BlueIrisNodeServer')
+        polyglot = udi_interface.Interface([])
         polyglot.start()
-        control = Controller(polyglot)
-        control.runForever()
+        Controller(polyglot, 'controller', 'controller', 'BlueIrisNodeServer')
+        polyglot.runForever()
     except (KeyboardInterrupt, SystemExit):
         sys.exit(0)
