@@ -356,7 +356,7 @@ class camNodePTZ(camNode):
 if __name__ == "__main__":
     try:
         polyglot = udi_interface.Interface([])
-        polyglot.start()
+        polyglot.start('2.0.0')
         Controller(polyglot, 'controller', 'controller', 'BlueIrisNodeServer')
         polyglot.runForever()
     except (KeyboardInterrupt, SystemExit):
