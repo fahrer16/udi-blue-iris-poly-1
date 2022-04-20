@@ -23,4 +23,7 @@
     <editor id="set_status">
       <range uom="25" subset="0-2" nls="SET_STATUS"/>
     </editor>
+    <editor id="connection">
+      <range uom="25" subset="0-2" nls="CONNECTION"/>
+    </editor>
 </editors>

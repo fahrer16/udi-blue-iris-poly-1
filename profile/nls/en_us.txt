@@ -72,3 +72,7 @@ LIGHT_STATES-3 = Disconnected
 SET_STATUS-0 = Red
 SET_STATUS-1 = Green
 SET_STATUS-2 = Yellow
+
+CONNECTION-0 = Disconnected
+CONNECTION-1 = Connected
+CONNECTION-2 = Failed

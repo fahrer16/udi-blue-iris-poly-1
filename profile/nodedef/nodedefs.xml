@@ -4,7 +4,7 @@
     <nodeDef id="controller" nls="ctl">
         <editors />
         <sts>
-			    <st id="ST" editor="bool" />
+	      <st id="ST" editor="connection" />
           <st id="GV1" editor="traffic_light" />
           <st id="GV2" editor="profile"/>
 		    </sts>

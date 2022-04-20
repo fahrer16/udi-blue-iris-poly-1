@@ -336,7 +336,7 @@ class camNodePTZ(camNode):
     def ptz(self, command=None):
         super().ptz(command)
 
-    drivers = [{'driver': 'ST', 'value': 0, 'uom': 2}, #Triggered, true or false
+    drivers = [{'driver': 'ST', 'value':0, 'uom': 25}, #Triggered, true or false
                {'driver': 'GV1', 'value':0, 'uom': 2}, #Enabled, true or false
                {'driver': 'GV2', 'value':0, 'uom': 2}, #Connected (online and signal present), true or false
                {'driver': 'GV3', 'value':0, 'uom': 2}, #Motion Detected, true or false
