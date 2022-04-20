@@ -129,7 +129,7 @@ class Controller(udi_interface.Node):
                     _shortName = cam['optionValue']
                     _address = _shortName.lower() #ISY address must be lower case but Blue Iris requires the name to be passed in the same case as it is defined so both are needed
                     _name = cam['optionDisplay']
-                    if _address not in self.nodes and _name[0] != '+': #if the name starts with '+', it's not a camera
+                    if not self.poly.getNode(_address) and _name[0] != '+': #if the name starts with a '+', it's not a camera
                         if cam['ptz']:
                             self.poly.addNode(camNodePTZ(self.poly, self.address, _address, _name, _shortName))
                         else:
@@ -356,7 +356,7 @@ class camNodePTZ(camNode):
 if __name__ == "__main__":
     try:
         polyglot = udi_interface.Interface([])
-        polyglot.start('2.0.0')
+        polyglot.start('2.0.1')
         Controller(polyglot, 'controller', 'controller', 'BlueIrisNodeServer')
         polyglot.runForever()
     except (KeyboardInterrupt, SystemExit):
