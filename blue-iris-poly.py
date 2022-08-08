@@ -115,6 +115,7 @@ class Controller(udi_interface.Node):
             _status = self.cmd("status")
             self.setDriver('GV1',_status["signal"])
             self.setDriver('GV2',_status["profile"])
+            self.setDriver('GV3',_status["lock"])
         except Exception as ex:
             LOGGER.error('Error querying Blue Iris %s', self.name)
             self.setDriver('GV1',3) #If there was an error querying the server, set the status to "Disconnected" so that the ISY can trigger an appropriate action (after a time delay set in ISY program).
@@ -204,11 +205,28 @@ class Controller(udi_interface.Node):
         except Exception as ex:
             LOGGER.error('Error setting profile of Blue Iris Server: %s', str(ex))
             return False
+        
+    def setLock(self, command = None):
+        try:
+            LOGGER.info('Command received to set Blue iris Lock: %s', str(command))
+            _lock = int(command.get('value'))
+            if _lock >= 0 and _lock <= 2:
+                self.cmd("status",{"lock":_lock})
+                return True
+            else:
+                LOGGER.error('Commanded lock must be between 0 and 2 but received %i', _lock)
+                return False
+        except Exception as ex:
+            LOGGER.error('Error setting lock on Blue Iris Server: %s', str(ex))
+            return False    
+        
+        
     id = 'controller'
-    commands = {'DISCOVER': discover, 'SET_STATE': setState, 'SET_PROFILE': setProfile}
+    commands = {'DISCOVER': discover, 'SET_STATE': setState, 'SET_PROFILE': setProfile, 'SET_LOCK': setLock}
     drivers = [{'driver': 'ST', 'value': 1, 'uom': 2}, #Polyglot connection status
                 {'driver': 'GV1', 'value': 0, 'uom': 25}, #Blue Iris Server Status (0=red, 1=green, 2=yellow, 3=disconnected)
-                {'driver': 'GV2', 'value':0, 'uom': 56} #Blue Iris Profile
+                {'driver': 'GV2', 'value':0, 'uom': 56}, #Blue Iris Profile
+                {'driver': 'GV3', 'value':0, 'uom': 25} #Blue Iris Lock (0=run, 1=temp, 2=hold)
                 ] 
 
 
