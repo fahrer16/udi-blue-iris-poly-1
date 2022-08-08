@@ -76,3 +76,7 @@ SET_STATUS-2 = Yellow
 CONNECTION-0 = Disconnected
 CONNECTION-1 = Connected
 CONNECTION-2 = Failed
+
+LOCK-0 = Run
+LOCK-1 = Temp
+LOCK-2 = Hold
