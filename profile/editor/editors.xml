@@ -5,6 +5,9 @@
     <editor id="profile">
       <range uom="56" min="0" max="7" prec="0" step="1"/>
     </editor>
+    <editor id="lock">
+      <range uom="25" subset="0-2" nls="LOCK"/>
+    </editor>
     <editor id="count">
       <range uom="56" min="0" max="65535" prec="0" step="1"/>
     </editor>
